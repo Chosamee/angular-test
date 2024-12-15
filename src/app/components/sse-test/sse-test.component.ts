@@ -1,10 +1,13 @@
 import { Component, OnDestroy } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
 import { CookieService } from 'ngx-cookie-service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
+  standalone: true,
   selector: 'app-sse-test',
   template: `
+    <button (click)="getCookie()">Get Cookie</button>
     <button (click)="testQueryParam()">Test with Query Param</button>
     <button (click)="testCookie()">Test with Cookie</button>
     <div>
@@ -18,14 +21,31 @@ export class SseTestComponent implements OnDestroy {
   message: string | null = null;
   subscription!: Subscription;
 
-  constructor(private cookieService: CookieService) {}
+  constructor(private cookieService: CookieService, private http: HttpClient) {}
+
+  getCookie(): void {
+    this.message = null;
+    const url = 'http://localhost:8080/cookie?kafkaName=sharedKafka';
+    this.http
+      .get(url, { responseType: 'text', withCredentials: true })
+      .subscribe({
+        next: (data) => {
+          this.message = data;
+          console.log('Received:', data);
+        },
+        error: (err) => console.error('Error:', err),
+      });
+  }
 
   testQueryParam(): void {
     this.message = null;
     const url = 'http://localhost:8080/sse1';
     const clientId = 'user123';
     this.subscription = this.connectWithQueryParam(url, clientId).subscribe({
-      next: (data) => ((this.message = data), console.log('Received:', data)),
+      next: (data) => {
+        this.message = data;
+        console.log('Received:', data);
+      },
       error: (err) => console.error('Error:', err),
     });
   }
@@ -33,9 +53,12 @@ export class SseTestComponent implements OnDestroy {
   testCookie(): void {
     this.message = null;
     const url = 'http://localhost:8080/sse';
-    this.cookieService.set('clientId', 'user1');
+    // this.cookieService.set('clientId', 'user1');
     this.subscription = this.connectWithCookie(url).subscribe({
-      next: (data) => ((this.message = data), console.log('Received:', data)),
+      next: (data) => {
+        this.message = data;
+        console.log('Received:', data);
+      },
       error: (err) => console.error('Error:', err),
     });
   }
